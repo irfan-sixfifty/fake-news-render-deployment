@@ -4,16 +4,19 @@ import re
 from nltk.corpus import stopwords
 from tqdm import tqdm
 import nltk
+import zipfile
 
 # Download necessary NLTK resources
 nltk.download('punkt')
 nltk.download('stopwords')
-nltk.download('punkt_tab')  
 
 app = Flask(__name__)
 
-# Load and preprocess data
-news_data = pd.read_csv('News.csv', encoding='latin1', index_col=0)
+# Load and preprocess data from ZIP file
+with zipfile.ZipFile("News.zip", "r") as z:
+    with z.open("News.csv") as f:
+        news_data = pd.read_csv(f, encoding="latin1", index_col=0)
+
 news_data = news_data.drop(["title", "subject", "date"], axis=1)
 news_data = news_data.sample(frac=1).reset_index(drop=True)
 
@@ -41,13 +44,12 @@ def get_random_article():
     return jsonify({
         'text': random_article['text'],
         'actual_class': 'Real' if random_article['class'] == 1 else 'Fake',
-        'index': int(random_article.name)  # ensure it's JSON serializable
+        'index': int(random_article.name)  # Ensure it's JSON serializable
     })
 
 @app.route('/check_guess', methods=['POST'])
 def check_guess():
-    user_input = request.get_json()  # renamed to avoid conflict with `news_data`
-    # Get the actual class from our data (using news_data, not df)
+    user_input = request.get_json()  # Avoid conflict with `news_data`
     actual_class = 'Real' if news_data.loc[user_input['index'], 'class'] == 1 else 'Fake'
     return jsonify({
         'correct': user_input['guess'] == actual_class,
