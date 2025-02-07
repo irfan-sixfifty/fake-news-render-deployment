@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NewsGuard AI</title>
+  <!-- Google Fonts: using Inter -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
+    rel="stylesheet"
+  />
+  <!-- Link to our static CSS file -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <style>
+    /* Additional inline styles can be placed here if needed */
+    .guess-buttons {
+      display: none;
+      gap: 1rem;
+      margin-top: 1.5rem;
+      justify-content: center;
+    }
+    .guess-btn {
+      flex: 1;
+      padding: 1rem;
+      border: none;
+      border-radius: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .real-btn {
+      background: var(--real-color, #10b981);
+      color: white;
+    }
+    .fake-btn {
+      background: var(--fake-color, #ef4444);
+      color: white;
+    }
+    .reveal-card {
+      display: none;
+      animation: fadeIn 0.5s ease;
+      text-align: center;
+      padding: 1rem;
+    }
+    .reveal-card h2,
+    .reveal-card .explanation {
+      text-align: center;
+    }
+    .disclaimer {
+      text-align: center;
+      margin-top: 2rem;
+      font-size: 0.9rem;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📰 NewsGuard AI</h1>
+
+    <button class="generate-btn" onclick="fetchRandomArticle()">Generate Random Article</button>
+
+    <div class="input-section" id="article-section">
+      <textarea 
+        id="article-text"
+        readonly
+        placeholder="Generated article will appear here..."
+      ></textarea>
+    </div>
+
+    <div class="guess-buttons" id="guess-buttons">
+      <button class="guess-btn real-btn" onclick="submitGuess('Real')">Real News</button>
+      <button class="guess-btn fake-btn" onclick="submitGuess('Fake')">Fake News</button>
+    </div>
+
+    <div class="reveal-card" id="result-card">
+      <h2 id="result-text"></h2>
+      <div class="explanation">
+        The article was classified as: <span id="actual-class"></span>
+      </div>
+      <button class="generate-btn" onclick="fetchRandomArticle()" style="margin-top: 1.5rem;">
+        Try Another Article
+      </button>
+    </div>
+
+    <div class="disclaimer">
+      This tool uses news articles from our verified dataset.<br />
+      Make your prediction first before seeing the actual classification.
+    </div>
+  </div>
+
+  <script>
+    let currentArticle = null;
+
+    function fetchRandomArticle() {
+      fetch('/get_random_article')
+        .then(response => response.json())
+        .then(data => {
+          currentArticle = data;
+          document.getElementById('article-text').value = data.text;
+          document.getElementById('article-section').style.display = 'block';
+          document.getElementById('guess-buttons').style.display = 'flex';
+          document.getElementById('result-card').style.display = 'none';
+        });
+    }
+
+    function submitGuess(guess) {
+      if (!currentArticle) return;
+      
+      fetch('/check_guess', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          index: currentArticle.index,
+          guess: guess
+        })
+      })
+      .then(response => response.json())
+      .then(result => {
+        const resultCard = document.getElementById('result-card');
+        const resultText = document.getElementById('result-text');
+        const actualClass = document.getElementById('actual-class');
+
+        resultText.textContent = result.correct ? "🎉 Correct!" : "❌ Try Again";
+        resultText.style.color = result.correct ? '#10b981' : '#ef4444';
+        actualClass.textContent = result.actual_class;
+        actualClass.style.color = result.actual_class === 'Real' ? '#10b981' : '#ef4444';
+        
+        document.getElementById('guess-buttons').style.display = 'none';
+        resultCard.style.display = 'block';
+      });
+    }
+  </script>
+</body>
+</html>
